@@ -1,661 +1,322 @@
 <!DOCTYPE html>
-<html lang="en" class="antialiased">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JoyGPT</title>
+    <title>JoyGPT - Final Fix</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        gemini: { 
-                            50: '#f0f4f9', 
-                            100: '#e1e5ea',
-                            500: '#4285f4', 
-                            600: '#1a73e8',
-                            dark: '#131314',
-                            surface: '#1e1f20'
-                        },
-                    },
-                    animation: { 'fade-in': 'fadeIn 0.3s ease-out' },
-                    keyframes: { fadeIn: { '0%': { opacity: '0', transform: 'translateY(5px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } }
-                }
-            }
-        }
-    </script>
-
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 
     <style>
-        /* Base Styles */
-        body, html { height: 100%; overflow: hidden; background-color: #ffffff; }
-        .dark body { background-color: #131314; }
+        /* Modern Dark Theme */
+        body { background-color: #0f111a; color: #e2e8f0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
         
-        /* Mobile Viewport Fix */
-        .h-dvh { height: 100dvh; }
+        /* Message Bubbles */
+        .msg-user { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border-radius: 18px 18px 4px 18px; margin-left: auto; }
+        .msg-ai { background-color: #1e293b; color: #f1f5f9; border-radius: 18px 18px 18px 4px; margin-right: auto; border: 1px solid #334155; }
         
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        .dark ::-webkit-scrollbar-thumb { background: #444746; }
-        
-        /* Markdown Content Styling */
-        .prose p { margin-bottom: 0.8rem; line-height: 1.6; }
-        .prose pre { background: #1e1f20; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; }
-        .prose code { font-family: monospace; font-size: 0.9em; background: rgba(100,100,100,0.1); padding: 0.1rem 0.3rem; rounded: 4px; }
-        .prose pre code { background: transparent; padding: 0; }
-        .prose ul { list-style-type: disc; margin-left: 1.2rem; }
-        .prose ol { list-style-type: decimal; margin-left: 1.2rem; }
-        .prose strong { font-weight: 700; }
-        
-        /* Loading Animation */
-        .typing-dot {
-            width: 6px; height: 6px; background-color: #8e8e8e; border-radius: 50%;
-            display: inline-block; animation: typing 1.4s infinite ease-in-out both;
+        /* Markdown Styles */
+        .prose pre { background: #0f111a !important; padding: 12px; border-radius: 8px; border: 1px solid #334155; overflow-x: auto; margin-top: 8px; }
+        .prose code { color: #f472b6; font-family: monospace; font-size: 0.9em; }
+        .prose p { margin-bottom: 8px; line-height: 1.6; }
+        .prose ul { list-style-type: disc; margin-left: 20px; }
+
+        /* Loader */
+        .typing-indicator span {
+            display: inline-block; width: 6px; height: 6px; background-color: #94a3b8; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out both; margin: 0 2px;
         }
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
     </style>
 </head>
-<body class="text-gray-900 dark:text-gray-100 font-sans transition-colors duration-200">
+<body class="font-sans antialiased">
 
-    <div id="loading" class="fixed inset-0 flex flex-col items-center justify-center bg-white dark:bg-gemini-dark z-[100]">
-        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
-        <p class="text-sm text-gray-500 font-medium tracking-wide">Initializing JoyGPT...</p>
+    <header class="flex justify-between items-center p-4 bg-[#0f111a] border-b border-gray-800 z-10">
+        <div class="flex items-center gap-2">
+            <div class="w-3 h-3 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+            <h1 class="font-bold text-lg tracking-wide bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">JoyGPT</h1>
+        </div>
+        <button onclick="openSettings()" class="p-2 text-gray-400 hover:text-white transition bg-gray-800 rounded-lg">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+    </header>
+
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth">
+        <div id="welcome-msg" class="flex flex-col items-center justify-center h-full text-center text-gray-500 opacity-60">
+            <svg class="w-16 h-16 mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+            <p>Ready to help. Setup your API Key to start.</p>
+        </div>
+    </main>
+
+    <div id="error-toast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-500/90 text-white px-6 py-3 rounded-full shadow-xl hidden z-50 text-sm font-medium animate-bounce">
+        <span id="error-text">Error!</span>
     </div>
 
-    <div id="app" class="hidden flex h-dvh w-full relative">
-        
-        <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-20 hidden lg:hidden transition-opacity backdrop-blur-sm" onclick="toggleSidebar()"></div>
-
-        <aside id="sidebar" class="absolute lg:relative w-[280px] h-full bg-gray-50 dark:bg-gemini-surface border-r border-gray-200 dark:border-gray-700 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 z-30 flex flex-col shadow-xl lg:shadow-none">
-            <div class="p-4 flex items-center justify-between">
-                <h1 class="font-bold text-xl bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">JoyGPT</h1>
-                <button onclick="toggleSidebar()" class="lg:hidden p-1 text-gray-500"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-            </div>
-
-            <div class="px-3 pb-2">
-                <button onclick="createNewChat()" class="w-full flex items-center gap-3 px-4 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-all text-sm font-medium text-gray-700 dark:text-gray-200 shadow-sm">
-                    <span class="text-xl">+</span> New Chat
-                </button>
-            </div>
-
-            <div class="flex-1 overflow-y-auto px-2 space-y-1 py-2" id="chat-history">
-                </div>
-
-            <div class="p-3 border-t border-gray-200 dark:border-gray-700 space-y-1 bg-gray-50 dark:bg-gemini-surface">
-                <button onclick="openSettings()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                    Settings
-                </button>
-                <button onclick="toggleTheme()" class="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors">
-                    <svg id="theme-icon" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-                    <span id="theme-text">Dark Mode</span>
-                </button>
-            </div>
-        </aside>
-
-        <main class="flex-1 flex flex-col h-full w-full bg-white dark:bg-gemini-dark relative">
-            
-            <header class="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 lg:hidden bg-white/80 dark:bg-gemini-dark/80 backdrop-blur z-10 sticky top-0">
-                <button onclick="toggleSidebar()" class="p-2 -ml-2 text-gray-600 dark:text-gray-300">
-                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                </button>
-                <span class="font-semibold text-gray-700 dark:text-gray-200">JoyGPT</span>
-                <div class="w-8"></div>
-            </header>
-
-            <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth pb-4">
-                <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-center p-6 opacity-60">
-                    <div class="w-20 h-20 bg-gradient-to-tr from-blue-500 to-purple-500 rounded-2xl rotate-3 blur-xl opacity-30 absolute"></div>
-                    <h2 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600 relative z-10 mb-2">Hi Joy</h2>
-                    <p class="text-gray-500 dark:text-gray-400 max-w-sm text-sm">How can i help you Today?</p>
+    <div class="bg-[#0f111a] p-4 border-t border-gray-800">
+        <div class="max-w-4xl mx-auto w-full relative">
+            <div id="img-preview-box" class="hidden absolute -top-20 left-0 bg-gray-800 p-2 rounded-lg border border-gray-700 shadow-lg">
+                <div class="relative">
+                    <img id="img-preview" class="h-16 w-16 object-cover rounded">
+                    <button onclick="clearImage()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-sm hover:bg-red-600">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
                 </div>
             </div>
 
-            <div class="w-full bg-white dark:bg-gemini-dark p-4 pt-2 shrink-0 z-20">
-                <div class="max-w-3xl mx-auto">
-                    <div id="image-preview-container" class="hidden mb-2 px-2">
-                        <div class="relative inline-block group">
-                            <img id="image-preview" src="" alt="Upload" class="h-16 w-16 object-cover rounded-lg border border-gray-200 dark:border-gray-700">
-                            <button onclick="clearImage()" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 shadow-md hover:bg-red-600">
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                            </button>
-                        </div>
-                    </div>
+            <div class="flex items-end gap-2 bg-[#1e293b] rounded-2xl p-2 border border-gray-700 focus-within:border-blue-500 transition-colors">
+                <button onclick="document.getElementById('file-upload').click()" class="p-3 text-gray-400 hover:text-blue-400 hover:bg-gray-700/50 rounded-xl transition">
+                    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                </button>
+                <input type="file" id="file-upload" accept="image/*" class="hidden" onchange="handleImage(event)">
 
-                    <div class="relative flex items-end gap-2 bg-gray-100 dark:bg-gemini-surface rounded-[26px] p-2 pr-2 border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 transition-colors">
-                        
-                        <button onclick="document.getElementById('file-upload').click()" class="p-3 text-gray-500 hover:text-blue-500 dark:text-gray-400 dark:hover:text-blue-400 transition-colors rounded-full hover:bg-gray-200 dark:hover:bg-white/10" title="Upload Image">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-                        </button>
-                        <input type="file" id="file-upload" accept="image/png, image/jpeg, image/webp" class="hidden" onchange="handleImageUpload(event)">
+                <textarea id="user-input" rows="1" placeholder="Type a message..." class="w-full bg-transparent border-none text-white placeholder-gray-500 py-3 focus:ring-0 resize-none max-h-32" oninput="this.style.height = 'auto'; this.style.height = this.scrollHeight + 'px'"></textarea>
 
-                        <textarea 
-                            id="user-input"
-                            rows="1"
-                            placeholder="Message JoyGPT..."
-                            class="w-full bg-transparent border-none text-gray-900 dark:text-gray-100 placeholder-gray-500 py-3 focus:ring-0 resize-none max-h-[120px] overflow-y-auto"
-                            oninput="autoResize(this)"
-                            onkeydown="handleEnter(event)"
-                        ></textarea>
-
-                        <button id="send-btn" onclick="sendMessage()" class="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md mb-[2px]" disabled>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                        </button>
-                    </div>
-                    <div class="text-center mt-2">
-                        <p class="text-[11px] text-gray-400 dark:text-gray-500">AI can make mistakes. Double check responses.</p>
-                    </div>
-                </div>
+                <button id="send-btn" onclick="sendMessage()" class="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
             </div>
-        </main>
+        </div>
     </div>
 
-    <div id="settings-modal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-[60] p-4 backdrop-blur-sm transition-opacity">
-        <div class="bg-white dark:bg-[#1e1f20] w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform scale-95 opacity-0 transition-all duration-200" id="settings-content">
-            <div class="p-5 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                <h3 class="font-bold text-lg dark:text-white">Settings</h3>
-                <button onclick="closeSettings()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-2xl">&times;</button>
+    <div id="settings-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-[#1e293b] w-full max-w-md rounded-2xl border border-gray-700 shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-900/50">
+                <h3 class="font-bold text-white">Config</h3>
+                <button onclick="closeSettings()" class="text-gray-400 hover:text-white">&times;</button>
             </div>
             
             <div class="p-6 space-y-5">
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Google Gemini API Key</label>
-                    <input type="password" id="api-key" class="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-gray-600 focus:outline-none focus:border-blue-500 dark:text-white transition-all text-sm" placeholder="AIzaSy...">
-                    <p class="text-[10px] text-gray-400 mt-1">Key is stored locally in your browser.</p>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Google Gemini API Key</label>
+                    <input type="password" id="api-key" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:border-blue-500 outline-none transition" placeholder="Paste key here...">
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">AI Model</label>
-                    <div class="relative">
-                        <select id="model-select" class="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-gray-600 focus:outline-none focus:border-blue-500 dark:text-white appearance-none text-sm">
-                            <option value="gemini-1.5-flash">Gemini 1.5 Flash (Recommended - Fast)</option>
-                            <option value="gemini-1.5-pro">Gemini 1.5 Pro (High Intelligence)</option>
-                            <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Experimental)</option>
-                        </select>
-                        <div class="absolute right-4 top-3.5 pointer-events-none text-gray-500">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">System Instruction</label>
-                    <textarea id="system-instr" rows="3" class="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-gray-600 focus:outline-none focus:border-blue-500 dark:text-white resize-none text-sm" placeholder="e.g. You are a helpful AI assistant..."></textarea>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Model</label>
+                    <select id="model-select" class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white outline-none">
+                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fastest & Stable)</option>
+                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (Smarter)</option>
+                    </select>
+                    <p class="text-[10px] text-gray-500 mt-2">Only use these official models to avoid 404 errors.</p>
                 </div>
             </div>
 
-            <div class="p-5 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-3 bg-gray-50 dark:bg-[#252627]">
-                <button onclick="closeSettings()" class="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/5 rounded-lg text-sm font-medium">Cancel</button>
-                <button onclick="saveSettings()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-lg shadow-blue-500/30 text-sm font-medium transition-all">Save</button>
+            <div class="p-4 bg-gray-900/50 flex justify-end gap-3">
+                <button onclick="localStorage.clear(); location.reload()" class="px-4 py-2 text-red-400 hover:bg-red-400/10 rounded-lg text-sm">Reset All</button>
+                <button onclick="saveSettings()" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium shadow-lg shadow-blue-500/20">Save</button>
             </div>
         </div>
     </div>
 
     <script>
-        // --- STATE & CONSTANTS ---
-        const STATE = {
-            chats: [],
-            currentChatId: null,
-            isGenerating: false,
-            currentImage: null, // { base64: string, mimeType: string }
-            settings: {
-                apiKey: '',
-                model: 'gemini-1.5-flash', // Default valid ID
-                systemInstruction: '',
-                theme: 'light'
-            }
+        // --- 1. CONFIG & STATE ---
+        const CONFIG = {
+            storageKey: 'joygpt_v3_config',
+            defaultModel: 'gemini-1.5-flash'
+        };
+
+        let state = {
+            apiKey: '',
+            model: CONFIG.defaultModel,
+            currentImage: null // { base64: string, mime: string }
         };
 
         const DOM = {
-            app: document.getElementById('app'),
-            loader: document.getElementById('loading'),
             input: document.getElementById('user-input'),
-            sendBtn: document.getElementById('send-btn'),
-            messages: document.getElementById('messages'),
-            history: document.getElementById('chat-history'),
-            sidebar: document.getElementById('sidebar'),
-            overlay: document.getElementById('sidebar-overlay'),
+            chat: document.getElementById('chat-container'),
+            welcome: document.getElementById('welcome-msg'),
             modal: document.getElementById('settings-modal'),
-            modalContent: document.getElementById('settings-content'),
-            imgPreviewCont: document.getElementById('image-preview-container'),
-            imgPreview: document.getElementById('image-preview'),
-            welcome: document.getElementById('welcome-screen')
+            errorToast: document.getElementById('error-toast'),
+            errorText: document.getElementById('error-text'),
+            imgPreview: document.getElementById('img-preview'),
+            imgBox: document.getElementById('img-preview-box')
         };
 
-        // --- INIT ---
+        // --- 2. INITIALIZATION (AUTO-CLEAN) ---
         function init() {
-            // Load LocalStorage
             try {
-                const settings = localStorage.getItem('joygpt_settings');
-                if (settings) STATE.settings = { ...STATE.settings, ...JSON.parse(settings) };
-                
-                const chats = localStorage.getItem('joygpt_chats');
-                if (chats) STATE.chats = JSON.parse(chats);
-            } catch (e) { console.error("Load error", e); }
-
-            // Apply Theme
-            applyTheme(STATE.settings.theme);
-
-            // Populate Settings UI
-            document.getElementById('api-key').value = STATE.settings.apiKey;
-            document.getElementById('model-select').value = STATE.settings.model;
-            document.getElementById('system-instr').value = STATE.settings.systemInstruction;
-
-            // Render
-            renderChatList();
-            if (STATE.chats.length === 0) createNewChat(false);
-            else loadChat(STATE.chats[0].id);
-
-            // Hide Loader
-            setTimeout(() => {
-                DOM.loader.classList.add('hidden');
-                DOM.app.classList.remove('hidden');
-            }, 500);
-        }
-
-        // --- THEME ENGINE ---
-        function toggleTheme() {
-            STATE.settings.theme = STATE.settings.theme === 'dark' ? 'light' : 'dark';
-            applyTheme(STATE.settings.theme);
-            saveStorage();
-        }
-
-        function applyTheme(theme) {
-            const html = document.documentElement;
-            const text = document.getElementById('theme-text');
-            const icon = document.getElementById('theme-icon');
-            
-            if (theme === 'dark') {
-                html.classList.add('dark');
-                text.innerText = 'Light Mode';
-                icon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>';
-            } else {
-                html.classList.remove('dark');
-                text.innerText = 'Dark Mode';
-                icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+                const saved = JSON.parse(localStorage.getItem(CONFIG.storageKey));
+                if (saved) {
+                    state.apiKey = saved.apiKey || '';
+                    // Force validate model ID. If it's garbage, revert to default.
+                    const validModels = ['gemini-1.5-flash', 'gemini-1.5-pro'];
+                    state.model = validModels.includes(saved.model) ? saved.model : CONFIG.defaultModel;
+                }
+            } catch (e) {
+                console.log("Fresh Start");
             }
+
+            // Populate UI
+            document.getElementById('api-key').value = state.apiKey;
+            document.getElementById('model-select').value = state.model;
         }
 
-        // --- CHAT LOGIC ---
-        function createNewChat(render = true) {
-            const chat = { id: Date.now().toString(), title: 'New Chat', messages: [] };
-            STATE.chats.unshift(chat);
-            saveStorage();
-            if (render) {
-                renderChatList();
-                loadChat(chat.id);
-                if (window.innerWidth < 1024) toggleSidebar();
-            }
-        }
-
-        function loadChat(id) {
-            STATE.currentChatId = id;
-            const chat = STATE.chats.find(c => c.id === id);
-            if (!chat) return;
-
-            // Sidebar Active State
-            document.querySelectorAll('.chat-item').forEach(el => {
-                el.classList.remove('bg-gray-200', 'dark:bg-white/10');
-                if (el.dataset.id === id) el.classList.add('bg-gray-200', 'dark:bg-white/10');
-            });
-
-            DOM.messages.innerHTML = '';
-            if (chat.messages.length === 0) {
-                DOM.messages.appendChild(DOM.welcome);
-                DOM.welcome.classList.remove('hidden');
-            } else {
-                DOM.welcome.classList.add('hidden');
-                chat.messages.forEach(msg => appendMessageUI(msg));
-            }
-            scrollToBottom();
-        }
-
-        function renderChatList() {
-            DOM.history.innerHTML = '';
-            STATE.chats.forEach(chat => {
-                const div = document.createElement('div');
-                div.className = `chat-item group flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-white/5 transition-colors text-sm ${chat.id === STATE.currentChatId ? 'bg-gray-200 dark:bg-white/10' : ''}`;
-                div.dataset.id = chat.id;
-                div.onclick = () => loadChat(chat.id);
-                div.innerHTML = `
-                    <span class="truncate text-gray-700 dark:text-gray-300 font-medium">${chat.title}</span>
-                    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="renameChat(event,'${chat.id}')" class="p-1 hover:text-blue-500"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-                        <button onclick="deleteChat(event,'${chat.id}')" class="p-1 hover:text-red-500"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
-                    </div>
-                `;
-                DOM.history.appendChild(div);
-            });
-        }
-
-        function deleteChat(e, id) {
-            e.stopPropagation();
-            if(!confirm('Delete this chat?')) return;
-            STATE.chats = STATE.chats.filter(c => c.id !== id);
-            saveStorage();
-            if (STATE.chats.length === 0) createNewChat(false);
-            if (STATE.currentChatId === id) loadChat(STATE.chats[0].id);
-            renderChatList();
-        }
-
-        function renameChat(e, id) {
-            e.stopPropagation();
-            const title = prompt("New chat name:");
-            if (title) {
-                STATE.chats.find(c => c.id === id).title = title;
-                saveStorage();
-                renderChatList();
-            }
-        }
-
-        // --- IMAGE HANDLING ---
-        function handleImageUpload(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                const base64Raw = evt.target.result;
-                // Store cleaned base64 for API
-                STATE.currentImage = {
-                    base64: base64Raw.split(',')[1],
-                    mimeType: file.type,
-                    display: base64Raw
-                };
-                DOM.imgPreview.src = base64Raw;
-                DOM.imgPreviewCont.classList.remove('hidden');
-            };
-            reader.readAsDataURL(file);
-            e.target.value = ''; // Reset input
-        }
-
-        function clearImage() {
-            STATE.currentImage = null;
-            DOM.imgPreviewCont.classList.add('hidden');
-        }
-
-        // --- API & STREAMING (CORE) ---
+        // --- 3. CORE LOGIC ---
         async function sendMessage() {
             const text = DOM.input.value.trim();
-            if ((!text && !STATE.currentImage) || STATE.isGenerating) return;
-            if (!STATE.settings.apiKey) return openSettings();
+            if ((!text && !state.currentImage) || !state.apiKey) {
+                if (!state.apiKey) openSettings();
+                return;
+            }
 
-            // 1. UI Prep
+            // UI Updates
+            DOM.welcome.classList.add('hidden');
+            const userText = text; 
+            const imgData = state.currentImage;
+            
+            // Clear Inputs
             DOM.input.value = '';
             DOM.input.style.height = 'auto';
-            DOM.sendBtn.disabled = true;
-            DOM.welcome.classList.add('hidden');
-            STATE.isGenerating = true;
-
-            // 2. Add User Message
-            const userMsg = { role: 'user', content: text, image: STATE.currentImage?.display };
-            const apiImage = STATE.currentImage ? { ...STATE.currentImage } : null; // Snapshot
-            clearImage(); // Clear from UI immediately
-
-            addMsgToState(userMsg);
-            appendMessageUI(userMsg);
-            scrollToBottom();
-
-            // 3. Prepare AI Message Placeholder
-            const aiMsgId = 'ai-' + Date.now();
-            appendMessageUI({ role: 'model', content: '', id: aiMsgId, isLoading: true });
-            const aiContentEl = document.getElementById(aiMsgId).querySelector('.prose');
-
-            // 4. Build Payload
-            const chat = STATE.chats.find(c => c.id === STATE.currentChatId);
+            clearImage();
             
-            // Map History (Gemini API Format)
-            // Filter out images from history to save tokens/complexity for this demo (or handle if you wish)
-            // For this specific constraint, we will send text history.
-            const contents = chat.messages.slice(0, -1).filter(m => m.role !== 'system').map(m => ({
-                role: m.role,
-                parts: [{ text: m.content }] // Keeping simple history for stability
-            }));
+            // 1. Render User Message
+            addMessage('user', userText, imgData);
 
-            // Current Turn parts
-            const currentParts = [];
-            if (text) currentParts.push({ text: text });
-            if (apiImage) {
-                currentParts.push({
+            // 2. Render AI Loader
+            const loaderId = addLoader();
+
+            // 3. Prepare Payload
+            const parts = [];
+            if (userText) parts.push({ text: userText });
+            if (imgData) {
+                parts.push({
                     inline_data: {
-                        mime_type: apiImage.mimeType,
-                        data: apiImage.base64
+                        mime_type: imgData.mime,
+                        data: imgData.base64
                     }
                 });
             }
-            contents.push({ role: 'user', parts: currentParts });
 
-            // System Instruction
-            const requestBody = {
-                contents: contents,
-                generationConfig: { temperature: 0.7 },
-                safetySettings: [
-                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-                ]
+            const payload = {
+                contents: [{ parts: parts }],
+                generationConfig: {
+                    temperature: 0.7,
+                    maxOutputTokens: 2000
+                }
             };
 
-            if (STATE.settings.systemInstruction) {
-                requestBody.systemInstruction = { parts: [{ text: STATE.settings.systemInstruction }] };
-            }
-
+            // 4. API Call (Strict Error Handling)
             try {
-                // 5. Fetch Stream
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${STATE.settings.model}:streamGenerateContent?key=${STATE.settings.apiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${state.model}:generateContent?key=${state.apiKey}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
+                    body: JSON.stringify(payload)
                 });
 
+                const data = await response.json();
+                removeLoader(loaderId);
+
                 if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.error?.message || `Status ${response.status}`);
+                    // Extract Google's specific error message
+                    const errorMsg = data.error?.message || `Status: ${response.status}`;
+                    showError(`API Error: ${errorMsg}`);
+                    addMessage('ai', `⚠️ **System Error:** ${errorMsg}\n\n*Check your API Key and Model settings.*`);
+                    return;
                 }
 
-                // 6. Read Stream
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                let accumulatedText = '';
-                let buffer = '';
-
-                // Remove loading dots
-                const loader = document.getElementById(aiMsgId).querySelector('.loading-dots');
-                if(loader) loader.remove();
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    buffer += decoder.decode(value, { stream: true });
-
-                    // Parse JSON objects from buffer
-                    // Expected format: [{...}]\n or ,\n{...}
-                    // Robust strategy: Match balanced braces
-                    let bracketDepth = 0;
-                    let startIndex = 0;
-                    let inString = false;
-
-                    for (let i = 0; i < buffer.length; i++) {
-                        const char = buffer[i];
-                        if (char === '"' && buffer[i-1] !== '\\') inString = !inString;
-                        if (!inString) {
-                            if (char === '{') {
-                                if (bracketDepth === 0) startIndex = i;
-                                bracketDepth++;
-                            } else if (char === '}') {
-                                bracketDepth--;
-                                if (bracketDepth === 0) {
-                                    // Found Object
-                                    const jsonStr = buffer.substring(startIndex, i + 1);
-                                    try {
-                                        const json = JSON.parse(jsonStr);
-                                        const chunk = json.candidates?.[0]?.content?.parts?.[0]?.text;
-                                        if (chunk) {
-                                            accumulatedText += chunk;
-                                            aiContentEl.innerHTML = DOMPurify.sanitize(marked.parse(accumulatedText));
-                                            aiContentEl.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
-                                            scrollToBottom();
-                                        }
-                                    } catch (e) { /* ignore incomplete json */ }
-                                    
-                                    // Move buffer forward
-                                    buffer = buffer.substring(i + 1);
-                                    i = -1; // Reset loop for new buffer
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Final Save
-                addMsgToState({ role: 'model', content: accumulatedText });
-
-                // Rename chat if new
-                if (chat.messages.length <= 2 && chat.title === 'New Chat') {
-                    chat.title = text.slice(0, 30);
-                    saveStorage();
-                    renderChatList();
+                // Success
+                const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (aiText) {
+                    addMessage('ai', aiText);
+                } else {
+                    addMessage('ai', "Received empty response from Gemini.");
                 }
 
             } catch (error) {
-                const loader = document.getElementById(aiMsgId).querySelector('.loading-dots');
-                if(loader) loader.remove();
-                aiContentEl.innerHTML += `<div class="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 rounded-lg text-sm mt-2">Error: ${error.message}</div>`;
-                addMsgToState({ role: 'model', content: "Error: " + error.message });
-            } finally {
-                STATE.isGenerating = false;
-                DOM.sendBtn.disabled = DOM.input.value.trim() === '';
+                removeLoader(loaderId);
+                showError("Network Error");
+                addMessage('ai', `⚠️ **Network Error:** ${error.message}. Check internet connection.`);
             }
         }
 
-        // --- HELPER FUNCTIONS ---
-        function appendMessageUI(msg) {
+        // --- 4. UI HELPERS ---
+        function addMessage(role, text, img) {
             const div = document.createElement('div');
-            div.id = msg.id || '';
-            div.className = `flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`;
-
-            const avatar = msg.role === 'model' 
-                ? `<div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-blue-500/20 shrink-0 mt-1">✨</div>` 
-                : '';
+            div.className = `flex flex-col max-w-[85%] mb-4 p-4 animate-fade-in text-[15px] leading-relaxed shadow-md ${role === 'user' ? 'msg-user' : 'msg-ai'}`;
             
-            // Image in message
-            let imgHtml = '';
-            if (msg.image) {
-                imgHtml = `<img src="${msg.image}" class="max-w-[200px] rounded-lg mb-2 border border-gray-200 dark:border-gray-700">`;
+            let content = '';
+            if (img) {
+                content += `<img src="${img.src}" class="max-w-full h-auto rounded-lg mb-3 border border-white/10">`;
             }
-
-            const bubbleClass = msg.role === 'user'
-                ? 'bg-[#f0f4f9] dark:bg-[#2e2f30] text-gray-800 dark:text-gray-100 rounded-2xl rounded-tr-sm px-5 py-3'
-                : 'text-gray-800 dark:text-gray-100 px-0 py-2 w-full max-w-4xl'; // Model messages have no bubble bg like Gemini
-
-            const contentHtml = msg.isLoading
-                ? `<div class="loading-dots flex gap-1 mt-2"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>`
-                : `<div class="prose dark:prose-invert max-w-none text-[15px] leading-relaxed break-words">${DOMPurify.sanitize(marked.parse(msg.content))}</div>`;
-
-            div.innerHTML = `
-                <div class="flex gap-4 max-w-[85%] lg:max-w-[75%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}">
-                    ${avatar}
-                    <div class="${bubbleClass}">
-                        ${imgHtml}
-                        ${contentHtml}
-                    </div>
-                </div>
-            `;
+            // Parse Markdown
+            const cleanHtml = DOMPurify.sanitize(marked.parse(text || ''));
+            content += `<div class="prose prose-invert">${cleanHtml}</div>`;
             
-            DOM.messages.appendChild(div);
-            if (!msg.isLoading) div.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+            div.innerHTML = content;
+            DOM.chat.appendChild(div);
+            DOM.chat.scrollTop = DOM.chat.scrollHeight;
         }
 
-        function addMsgToState(msg) {
-            const chat = STATE.chats.find(c => c.id === STATE.currentChatId);
-            if (chat) chat.messages.push(msg);
-            saveStorage();
+        function addLoader() {
+            const id = 'loader-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'flex max-w-[100px] mb-4 p-4 msg-ai';
+            div.innerHTML = `<div class="typing-indicator"><span></span><span></span><span></span></div>`;
+            DOM.chat.appendChild(div);
+            DOM.chat.scrollTop = DOM.chat.scrollHeight;
+            return id;
         }
 
-        function saveStorage() {
-            localStorage.setItem('joygpt_settings', JSON.stringify(STATE.settings));
-            localStorage.setItem('joygpt_chats', JSON.stringify(STATE.chats));
+        function removeLoader(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
         }
 
-        function autoResize(el) {
-            el.style.height = 'auto';
-            el.style.height = el.scrollHeight + 'px';
-            DOM.sendBtn.disabled = el.value.trim() === '' && !STATE.currentImage;
+        function showError(msg) {
+            DOM.errorText.innerText = msg;
+            DOM.errorToast.classList.remove('hidden');
+            setTimeout(() => DOM.errorToast.classList.add('hidden'), 4000);
         }
 
-        function handleEnter(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
-            }
+        // --- 5. IMAGE HANDLING ---
+        function handleImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                state.currentImage = {
+                    base64: evt.target.result.split(',')[1],
+                    mime: file.type,
+                    src: evt.target.result
+                };
+                DOM.imgPreview.src = evt.target.result;
+                DOM.imgBox.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
         }
 
-        function scrollToBottom() {
-            DOM.messages.scrollTo({ top: DOM.messages.scrollHeight, behavior: 'smooth' });
+        function clearImage() {
+            state.currentImage = null;
+            DOM.imgBox.classList.add('hidden');
+            document.getElementById('file-upload').value = '';
         }
 
-        function toggleSidebar() {
-            const sb = DOM.sidebar;
-            const ov = DOM.overlay;
-            if (sb.classList.contains('-translate-x-full')) {
-                sb.classList.remove('-translate-x-full');
-                ov.classList.remove('hidden');
-                setTimeout(() => ov.classList.remove('opacity-0'), 10);
-            } else {
-                sb.classList.add('-translate-x-full');
-                ov.classList.add('opacity-0');
-                setTimeout(() => ov.classList.add('hidden'), 300);
-            }
-        }
-
-        function openSettings() {
-            DOM.modal.classList.remove('hidden');
-            DOM.modal.classList.add('flex');
-            setTimeout(() => {
-                DOM.modalContent.classList.remove('scale-95', 'opacity-0');
-                DOM.modalContent.classList.add('scale-100', 'opacity-100');
-            }, 10);
-        }
-
-        function closeSettings() {
-            DOM.modalContent.classList.remove('scale-100', 'opacity-100');
-            DOM.modalContent.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                DOM.modal.classList.add('hidden');
-                DOM.modal.classList.remove('flex');
-            }, 200);
-        }
+        // --- 6. SETTINGS ---
+        function openSettings() { DOM.modal.classList.remove('hidden'); DOM.modal.classList.add('flex'); }
+        function closeSettings() { DOM.modal.classList.add('hidden'); DOM.modal.classList.remove('flex'); }
 
         function saveSettings() {
-            STATE.settings.apiKey = document.getElementById('api-key').value.trim();
-            // Directly get value (no parsing display text needed now)
-            STATE.settings.model = document.getElementById('model-select').value;
-            STATE.settings.systemInstruction = document.getElementById('system-instr').value.trim();
-            saveStorage();
+            state.apiKey = document.getElementById('api-key').value.trim();
+            state.model = document.getElementById('model-select').value;
+            
+            // Validate before saving
+            if(!state.apiKey) { alert("Please enter API Key"); return; }
+            
+            localStorage.setItem(CONFIG.storageKey, JSON.stringify(state));
             closeSettings();
+            showError("Settings Saved!"); // Reusing toast for success
+            setTimeout(() => DOM.errorToast.classList.add('bg-green-600'), 0); 
+            setTimeout(() => DOM.errorToast.classList.remove('bg-green-600'), 4000);
         }
 
-        // --- START ---
-        window.addEventListener('DOMContentLoaded', init);
-        window.addEventListener('resize', () => {
-             // Mobile height fix
-             document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
-        });
+        // Run Init
+        init();
 
     </script>
 </body>
