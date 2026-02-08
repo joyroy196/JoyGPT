@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JoyGPT - Final Fix</title>
+    <title>JoyGPT</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -200,7 +200,7 @@
 
             // 4. API Call (Strict Error Handling)
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${state.model}:generateContent?key=${state.apiKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1/models/${state.model}:generateContent?key=${state.apiKey}`;
                 
                 const response = await fetch(url, {
                     method: 'POST',
