@@ -3,239 +3,759 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JoyGPT - Ultimate</title>
+    <title>JoyGPT</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gemini: {
+                            50: '#f0f4f9',
+                            100: '#e1e7ef',
+                            200: '#c3cfde',
+                            800: '#1e1f20',
+                            900: '#131314',
+                            accent: '#4285f4'
+                        }
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    }
+                }
+            }
+        }
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        body { background-color: #000000; color: #ffffff; font-family: 'Segoe UI', sans-serif; height: 100dvh; display: flex; flex-direction: column; }
-        .chat-container { flex: 1; overflow-y: auto; padding: 1rem; scroll-behavior: smooth; }
-        .msg { max-width: 85%; padding: 12px 16px; border-radius: 18px; margin-bottom: 12px; font-size: 15px; line-height: 1.6; word-wrap: break-word; }
-        .user { background: #2563eb; color: white; margin-left: auto; border-bottom-right-radius: 4px; }
-        .ai { background: #1f2937; color: #e5e7eb; margin-right: auto; border-bottom-left-radius: 4px; border: 1px solid #374151; }
-        .error-box { background: #450a0a; border: 1px solid #ef4444; color: #fca5a5; padding: 10px; border-radius: 8px; font-size: 13px; margin: 10px 0; }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+
         /* Markdown Styles */
-        .prose pre { background: #111827; padding: 10px; border-radius: 6px; overflow-x: auto; border: 1px solid #374151; }
-        .prose code { font-family: monospace; color: #60a5fa; background: #1f2937; padding: 2px 4px; rounded: 4px; }
-        /* Loader */
-        .typing span { display: inline-block; width: 6px; height: 6px; background: #9ca3af; border-radius: 50%; animation: bounce 1.4s infinite; margin: 0 2px; }
-        .typing span:nth-child(2) { animation-delay: 0.2s; }
-        .typing span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .prose pre { background-color: #1e293b; color: #e2e8f0; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+        .prose code { background-color: rgba(0,0,0,0.1); padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-size: 0.875em; }
+        .dark .prose code { background-color: rgba(255,255,255,0.1); color: #e2e8f0; }
+        .prose p { margin-bottom: 0.75rem; line-height: 1.6; }
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        
+        /* Mobile Layout Fixes */
+        body, html { height: 100%; overflow: hidden; }
+        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        
+        /* Loading Animation */
+        .typing-cursor::after {
+            content: '▋';
+            animation: blink 1s step-start infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
-<body>
+<body class="bg-white dark:bg-gemini-900 text-slate-800 dark:text-slate-200 font-sans transition-colors duration-200">
 
-    <div class="flex justify-between items-center p-4 border-b border-gray-800 bg-black/50 backdrop-blur">
-        <h1 class="font-bold text-xl bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">JoyGPT</h1>
-        <button onclick="openSettings()" class="p-2 bg-gray-800 rounded-full hover:bg-gray-700 transition">
-            ⚙️
-        </button>
-    </div>
-
-    <div id="chat-box" class="chat-container">
-        <div id="welcome" class="flex flex-col items-center justify-center h-full text-gray-500 text-center p-6">
-            <div class="text-4xl mb-4">🤖</div>
-            <p>Please configure your API Key first.</p>
-            <button onclick="openSettings()" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm">Open Settings</button>
+    <div id="app-loader" class="fixed inset-0 z-50 flex items-center justify-center bg-white dark:bg-gemini-900">
+        <div class="flex flex-col items-center gap-4">
+            <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p class="text-slate-500 font-medium">Loading JoyGPT...</p>
         </div>
     </div>
 
-    <div class="p-3 border-t border-gray-800 bg-black">
-        <div class="flex gap-2 bg-gray-900 p-2 rounded-xl border border-gray-700">
-            <input type="text" id="user-input" placeholder="Message..." class="flex-1 bg-transparent text-white focus:outline-none px-2" onkeypress="if(event.key==='Enter') sendMessage()">
-            <button onclick="sendMessage()" class="bg-blue-600 p-2 rounded-lg text-white hover:bg-blue-500 transition">
-                ➤
-            </button>
-        </div>
+    <div id="app" class="flex h-[100dvh] w-full hidden opacity-0 transition-opacity duration-300">
+        
+        <aside id="sidebar" class="absolute md:relative z-40 w-72 h-full bg-gemini-50 dark:bg-gemini-800 transform -translate-x-full md:translate-x-0 transition-transform duration-300 flex flex-col border-r border-slate-200 dark:border-slate-700 shadow-xl md:shadow-none">
+            
+            <div class="p-4 flex items-center justify-between">
+                <button onclick="createNewChat()" class="flex-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-sm font-medium py-2.5 px-4 rounded-full flex items-center gap-2 transition-colors">
+                    <i class="fa-solid fa-plus text-slate-500 dark:text-slate-400"></i>
+                    <span>New Chat</span>
+                </button>
+                <button onclick="toggleSidebar()" class="md:hidden ml-3 text-slate-500">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto px-2 space-y-1" id="chat-history-list">
+                </div>
+
+            <div class="p-4 border-t border-slate-200 dark:border-slate-700 space-y-2">
+                <button onclick="openSettings()" class="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                    <i class="fa-solid fa-gear"></i> Settings & Models
+                </button>
+                <div class="flex items-center justify-between px-3 pt-2">
+                    <span class="text-xs text-slate-400">Dark Mode</span>
+                    <button onclick="toggleTheme()" class="text-slate-500 hover:text-blue-500 transition-colors">
+                        <i id="theme-icon" class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-30 hidden md:hidden glass"></div>
+
+        <main class="flex-1 flex flex-col relative w-full h-full bg-white dark:bg-gemini-900">
+            
+            <div class="md:hidden flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+                <button onclick="toggleSidebar()" class="text-slate-500 dark:text-slate-400">
+                    <i class="fa-solid fa-bars text-xl"></i>
+                </button>
+                <span class="font-semibold text-slate-700 dark:text-slate-200">JoyGPT</span>
+                <div class="w-6"></div> </div>
+
+            <div id="messages-container" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth pb-32">
+                <div id="welcome-screen" class="flex flex-col items-center justify-center h-full text-center opacity-80 mt-[-50px]">
+                    <div class="w-16 h-16 bg-gradient-to-tr from-blue-400 to-red-400 rounded-2xl mb-6 shadow-lg animate-pulse"></div>
+                    <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500 mb-2">Hi Joy</h1>
+                    <p class="text-slate-500 dark:text-slate-400 max-w-md">How can i help you Today?</p>
+                </div>
+            </div>
+
+            <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-white via-white to-transparent dark:from-gemini-900 dark:via-gemini-900 pt-10 pb-4 px-4 z-20">
+                <div class="max-w-3xl mx-auto relative">
+                    
+                    <div id="image-preview-container" class="hidden absolute -top-16 left-0 bg-white dark:bg-slate-800 p-2 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 flex items-start gap-2">
+                        <img id="image-preview" src="" alt="Preview" class="h-12 w-auto rounded object-cover">
+                        <button onclick="clearImage()" class="text-red-500 hover:text-red-700 bg-white dark:bg-slate-700 rounded-full w-5 h-5 flex items-center justify-center text-xs shadow">
+                            <i class="fa-solid fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-end gap-2 bg-slate-100 dark:bg-gemini-800 border border-slate-200 dark:border-slate-700 rounded-3xl p-2 pl-4 shadow-sm focus-within:ring-2 focus-within:ring-blue-500/50 transition-all">
+                        
+                        <button onclick="document.getElementById('image-upload').click()" class="p-2 text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors mb-0.5" title="Upload Image">
+                            <i class="fa-solid fa-paperclip text-lg"></i>
+                        </button>
+                        <input type="file" id="image-upload" accept="image/png, image/jpeg, image/webp" class="hidden" onchange="handleImageUpload(event)">
+
+                        <textarea id="user-input" rows="1" class="w-full bg-transparent border-none focus:ring-0 resize-none py-3 max-h-32 text-slate-800 dark:text-slate-100 placeholder-slate-500" placeholder="Ask anything..."></textarea>
+
+                        <button onclick="sendMessage()" id="send-btn" class="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed mb-0.5">
+                            <i class="fa-solid fa-paper-plane text-sm"></i>
+                        </button>
+                    </div>
+                    <p class="text-center text-xs text-slate-400 mt-2">Gemini can make mistakes. Check important info.</p>
+                </div>
+            </div>
+
+        </main>
     </div>
 
-    <div id="settings-modal" class="fixed inset-0 bg-black/90 z-50 hidden flex-col items-center justify-center p-4">
-        <div class="bg-gray-900 w-full max-w-md p-6 rounded-2xl border border-gray-700 shadow-2xl">
-            <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                ⚙️ Setup
-                <span id="status-indicator" class="text-xs font-normal px-2 py-0.5 rounded bg-gray-800 text-gray-400">Not Checked</span>
-            </h2>
-            
-            <label class="block text-xs text-gray-400 uppercase font-bold mb-2">Google API Key</label>
-            <input type="password" id="api-key" placeholder="Paste your AI Studio Key here" class="w-full bg-black border border-gray-700 text-white p-3 rounded-lg mb-4 focus:border-blue-500 outline-none">
-
-            <button onclick="fetchAvailableModels()" class="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg mb-4 text-sm font-bold transition">
-                🔍 Check Key & Load Models
-            </button>
-
-            <div id="model-section" class="hidden">
-                <label class="block text-xs text-gray-400 uppercase font-bold mb-2">Select Available Model</label>
-                <select id="model-select" class="w-full bg-black border border-gray-700 text-white p-3 rounded-lg outline-none mb-4">
-                    </select>
-                <p class="text-[10px] text-green-400 mb-4">* Listed models are confirmed to work with your key.</p>
-            </div>
-
-            <div class="flex gap-3 mt-4">
-                <button onclick="closeSettings()" class="flex-1 py-3 text-gray-400 hover:bg-gray-800 rounded-lg">Close</button>
-                <button onclick="saveSettings()" class="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold">Save & Start</button>
+    <div id="settings-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 hidden backdrop-blur-sm">
+        <div class="bg-white dark:bg-gemini-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden m-4 flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                <h2 class="text-lg font-bold">Settings</h2>
+                <button onclick="closeSettings()" class="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"><i class="fa-solid fa-times text-xl"></i></button>
             </div>
             
-            <div id="api-error-log" class="mt-4 text-xs text-red-400 hidden bg-red-900/20 p-2 rounded border border-red-900"></div>
+            <div class="p-6 space-y-6 overflow-y-auto">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Google Gemini API Key</label>
+                    <div class="flex gap-2">
+                        <input type="password" id="api-key-input" class="flex-1 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" placeholder="Enter AI Studio Key">
+                        <button onclick="toggleKeyVisibility()" class="text-slate-500 px-2"><i class="fa-solid fa-eye"></i></button>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Key is stored locally in your browser.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">AI Model</label>
+                    <div class="flex gap-2">
+                        <select id="model-select" class="flex-1 bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500">
+                            <option value="gemini-1.5-flash">gemini-1.5-flash (Default)</option>
+                        </select>
+                        <button onclick="fetchAvailableModels()" id="refresh-models-btn" class="bg-blue-100 dark:bg-slate-600 text-blue-600 dark:text-blue-300 px-3 py-2 rounded-lg hover:bg-blue-200 transition-colors" title="Fetch available models from Google">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                    <p id="model-status" class="text-xs text-slate-400 mt-1">Click refresh to load valid models for your key.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">System Instructions</label>
+                    <textarea id="system-prompt" rows="3" class="w-full bg-slate-100 dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500" placeholder="You are a helpful AI..."></textarea>
+                </div>
+
+                <div class="pt-4 border-t border-slate-200 dark:border-slate-700">
+                    <button onclick="clearAllData()" class="text-red-500 text-sm hover:underline">Clear all chat history & data</button>
+                </div>
+            </div>
+
+            <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-end">
+                <button onclick="saveSettings()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors">Save & Close</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // State
-        let STATE = {
-            key: localStorage.getItem('joy_final_key') || '',
-            model: localStorage.getItem('joy_final_model') || 'gemini-1.5-flash'
+        // --- CONSTANTS & STATE ---
+        const DEFAULT_MODEL = "gemini-1.5-flash";
+        const STATE_KEY = "joygpt_state";
+        
+        let state = {
+            apiKey: "",
+            model: DEFAULT_MODEL,
+            systemPrompt: "",
+            theme: "light",
+            chats: [], // { id, title, timestamp, messages: [] }
+            currentChatId: null,
+            availableModels: [] // Cache for models fetched from API
         };
 
-        const UI = {
-            chat: document.getElementById('chat-box'),
-            input: document.getElementById('user-input'),
-            modal: document.getElementById('settings-modal'),
-            apiKey: document.getElementById('api-key'),
-            modelSelect: document.getElementById('model-select'),
-            modelSection: document.getElementById('model-section'),
-            errorLog: document.getElementById('api-error-log'),
-            status: document.getElementById('status-indicator'),
-            welcome: document.getElementById('welcome')
-        };
+        let imagePayload = null; // Stores { mime_type, data }
+        let isGenerating = false;
 
-        // Initialize
-        window.onload = () => {
-            if(STATE.key) {
-                UI.apiKey.value = STATE.key;
-                UI.welcome.classList.add('hidden');
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadState();
+            initTheme();
+            renderSidebar();
+            
+            // Setup Textarea Auto-resize
+            const textarea = document.getElementById('user-input');
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+                if(this.value === '') this.style.height = 'auto';
+            });
+
+            // Enter key to send (Shift+Enter for newline)
+            textarea.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if(!isGenerating) sendMessage();
+                }
+            });
+
+            // Hide loader
+            setTimeout(() => {
+                document.getElementById('app-loader').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+                document.getElementById('app').classList.add('opacity-100');
+            }, 500);
+
+            // Populate cached models if any
+            populateModelDropdown();
+        });
+
+        // --- STATE MANAGEMENT ---
+        function loadState() {
+            const saved = localStorage.getItem(STATE_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                state = { ...state, ...parsed };
+                // Handle legacy state or missing currentChatId
+                if (state.chats.length > 0 && !state.currentChatId) {
+                    state.currentChatId = state.chats[0].id;
+                }
             }
-            // If we have a saved model, try to add it to select temporarily
-            if(STATE.model) {
-                const opt = document.createElement('option');
-                opt.value = STATE.model;
-                opt.text = STATE.model + " (Saved)";
-                UI.modelSelect.add(opt);
+            
+            // Restore Settings Inputs
+            document.getElementById('api-key-input').value = state.apiKey;
+            document.getElementById('system-prompt').value = state.systemPrompt || "";
+            
+            if (state.currentChatId) {
+                loadChat(state.currentChatId);
+            } else {
+                showWelcome();
             }
-        };
+        }
 
-        function openSettings() { UI.modal.classList.remove('hidden'); UI.modal.classList.add('flex'); }
-        function closeSettings() { UI.modal.classList.add('hidden'); UI.modal.classList.remove('flex'); }
+        function saveState() {
+            localStorage.setItem(STATE_KEY, JSON.stringify(state));
+        }
 
-        // --- THE MAGIC FIX: Fetch Real Models from Google ---
+        // --- THEME ---
+        function initTheme() {
+            if (state.theme === 'dark' || (!state.theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('theme-icon').classList.replace('fa-moon', 'fa-sun');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        function toggleTheme() {
+            state.theme = state.theme === 'light' ? 'dark' : 'light';
+            initTheme();
+            saveState();
+        }
+
+        // --- DYNAMIC MODEL FETCHING (THE CORE REQUEST) ---
         async function fetchAvailableModels() {
-            const key = UI.apiKey.value.trim();
-            if(!key) return alert("Please enter API Key first!");
+            const key = document.getElementById('api-key-input').value.trim();
+            const btn = document.getElementById('refresh-models-btn');
+            const status = document.getElementById('model-status');
+            const select = document.getElementById('model-select');
 
-            UI.status.innerText = "Checking...";
-            UI.status.className = "text-xs px-2 py-0.5 rounded bg-yellow-600 text-white";
-            UI.errorLog.classList.add('hidden');
+            if (!key) {
+                status.innerText = "Please enter an API Key first.";
+                status.classList.add("text-red-500");
+                return;
+            }
+
+            // UI Feedback
+            btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>';
+            status.innerText = "Fetching models from Google...";
+            status.classList.remove("text-red-500");
 
             try {
-                // Query Google for list of models
-                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-                const data = await res.json();
+                // Fetch models list from Google
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+                
+                if (!response.ok) throw new Error("Failed to fetch models. Check API Key.");
+                
+                const data = await response.json();
+                
+                // Filter models: Must support 'generateContent' and be a 'gemini' model
+                const validModels = data.models
+                    .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes("generateContent"))
+                    .filter(m => m.name.toLowerCase().includes("gemini"))
+                    .map(m => m.name.replace("models/", "")); // Clean up ID
 
-                if(data.error) {
-                    throw new Error(data.error.message);
+                if (validModels.length === 0) throw new Error("No Gemini models found.");
+
+                // Update State
+                state.availableModels = validModels;
+                
+                // Auto-select the first pro or flash model if current selection is invalid
+                if (!validModels.includes(state.model)) {
+                    state.model = validModels.find(m => m.includes("1.5-pro")) || validModels[0];
                 }
 
-                // Filter only models that support 'generateContent'
-                const validModels = data.models.filter(m => m.supportedGenerationMethods.includes("generateContent"));
-                
-                if(validModels.length === 0) throw new Error("No chat models found for this API Key.");
+                populateModelDropdown();
+                status.innerText = `Success! Loaded ${validModels.length} models.`;
+                status.classList.add("text-green-500");
+                saveState();
 
-                // Populate Dropdown
-                UI.modelSelect.innerHTML = "";
-                validModels.forEach(m => {
-                    const cleanName = m.name.replace('models/', '');
-                    const option = document.createElement('option');
-                    option.value = cleanName;
-                    option.text = `${m.displayName} (${cleanName})`;
-                    if(cleanName.includes('flash')) option.selected = true; // Prefer Flash
-                    UI.modelSelect.appendChild(option);
-                });
-
-                UI.modelSection.classList.remove('hidden');
-                UI.status.innerText = "Success ✅";
-                UI.status.className = "text-xs px-2 py-0.5 rounded bg-green-600 text-white";
-
-            } catch (err) {
-                UI.status.innerText = "Failed ❌";
-                UI.status.className = "text-xs px-2 py-0.5 rounded bg-red-600 text-white";
-                UI.errorLog.innerText = "Error: " + err.message;
-                UI.errorLog.classList.remove('hidden');
+            } catch (error) {
+                console.error(error);
+                status.innerText = "Error: " + error.message;
+                status.classList.add("text-red-500");
+            } finally {
+                btn.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i>';
             }
+        }
+
+        function populateModelDropdown() {
+            const select = document.getElementById('model-select');
+            select.innerHTML = "";
+
+            // If we have fetched models, use them
+            const modelsToShow = state.availableModels.length > 0 
+                ? state.availableModels 
+                : [DEFAULT_MODEL, "gemini-1.5-pro", "gemini-2.0-flash-exp"]; // Fallbacks
+
+            modelsToShow.forEach(modelId => {
+                const option = document.createElement('option');
+                option.value = modelId;
+                option.text = modelId;
+                if (modelId === state.model) option.selected = true;
+                select.appendChild(option);
+            });
+        }
+
+        // --- SETTINGS ---
+        function openSettings() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-modal').classList.add('hidden');
         }
 
         function saveSettings() {
-            STATE.key = UI.apiKey.value.trim();
-            STATE.model = UI.modelSelect.value || 'gemini-1.5-flash';
+            const newKey = document.getElementById('api-key-input').value.trim();
+            const newModel = document.getElementById('model-select').value;
+            const newSystem = document.getElementById('system-prompt').value;
+
+            state.apiKey = newKey;
+            state.model = newModel;
+            state.systemPrompt = newSystem;
             
-            if(!STATE.key) return alert("API Key is required!");
-            
-            localStorage.setItem('joy_final_key', STATE.key);
-            localStorage.setItem('joy_final_model', STATE.model);
-            UI.welcome.classList.add('hidden');
+            saveState();
             closeSettings();
-            addMessage('ai', `System Ready. Using model: **${STATE.model}**`);
         }
 
-        // --- Sending Messages ---
-        async function sendMessage() {
-            const text = UI.input.value.trim();
-            if(!text) return;
-            if(!STATE.key) return openSettings();
+        function toggleKeyVisibility() {
+            const input = document.getElementById('api-key-input');
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
 
-            UI.input.value = '';
-            addMessage('user', text);
-            const loadingId = addLoader();
-
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${STATE.model}:generateContent?key=${STATE.key}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: text }] }]
-                    })
-                });
-
-                const data = await response.json();
-                document.getElementById(loadingId).remove();
-
-                if(data.error) {
-                    addError(`API Error (${STATE.model}): ${data.error.message}`);
-                } else {
-                    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response text.";
-                    addMessage('ai', aiText);
-                }
-
-            } catch (err) {
-                document.getElementById(loadingId).remove();
-                addError("Network Error. Please check your internet.");
+        function clearAllData() {
+            if(confirm("Are you sure? This will delete all chats and keys.")) {
+                localStorage.removeItem(STATE_KEY);
+                location.reload();
             }
         }
 
-        // --- UI Helpers ---
-        function addMessage(role, text) {
-            const div = document.createElement('div');
-            div.className = `msg ${role}`;
-            div.innerHTML = role === 'ai' ? marked.parse(text) : text;
-            UI.chat.appendChild(div);
-            UI.chat.scrollTop = UI.chat.scrollHeight;
+        // --- CHAT LOGIC ---
+        function createNewChat() {
+            const newId = Date.now().toString();
+            const newChat = {
+                id: newId,
+                title: "New Chat",
+                timestamp: Date.now(),
+                messages: []
+            };
+            state.chats.unshift(newChat);
+            state.currentChatId = newId;
+            saveState();
+            renderSidebar();
+            loadChat(newId);
+            if(window.innerWidth < 768) toggleSidebar(); // Close mobile menu
         }
 
-        function addError(text) {
-            const div = document.createElement('div');
-            div.className = `msg ai`;
-            div.innerHTML = `<div class="error-box">⚠️ ${text}</div><div class="text-xs text-gray-500 mt-2">Try checking settings > Load Models again.</div>`;
-            UI.chat.appendChild(div);
-            UI.chat.scrollTop = UI.chat.scrollHeight;
+        function loadChat(chatId) {
+            state.currentChatId = chatId;
+            const chat = state.chats.find(c => c.id === chatId);
+            
+            const container = document.getElementById('messages-container');
+            container.innerHTML = ""; // Clear view
+
+            if (!chat || chat.messages.length === 0) {
+                showWelcome();
+            } else {
+                chat.messages.forEach(msg => renderMessage(msg));
+            }
+            
+            renderSidebar(); // Update active state
+            scrollToBottom();
         }
 
-        function addLoader() {
-            const id = 'load-' + Date.now();
-            const div = document.createElement('div');
-            div.id = id;
-            div.className = 'msg ai typing';
-            div.innerHTML = '<span></span><span></span><span></span>';
-            UI.chat.appendChild(div);
-            UI.chat.scrollTop = UI.chat.scrollHeight;
-            return id;
+        function deleteChat(e, id) {
+            e.stopPropagation();
+            if(confirm("Delete this chat?")) {
+                state.chats = state.chats.filter(c => c.id !== id);
+                if (state.currentChatId === id) {
+                    state.currentChatId = state.chats.length > 0 ? state.chats[0].id : null;
+                }
+                saveState();
+                renderSidebar();
+                if (state.currentChatId) loadChat(state.currentChatId);
+                else {
+                    document.getElementById('messages-container').innerHTML = "";
+                    showWelcome();
+                }
+            }
+        }
+
+        function renderSidebar() {
+            const list = document.getElementById('chat-history-list');
+            list.innerHTML = "";
+
+            state.chats.forEach(chat => {
+                const isActive = chat.id === state.currentChatId;
+                const div = document.createElement('div');
+                div.className = `group flex items-center justify-between p-3 rounded-lg cursor-pointer text-sm transition-colors ${isActive ? 'bg-blue-100 dark:bg-slate-700 text-blue-700 dark:text-blue-100' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'}`;
+                div.onclick = () => loadChat(chat.id);
+                
+                div.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <i class="fa-regular fa-message"></i>
+                        <span class="truncate max-w-[140px]">${chat.title}</span>
+                    </div>
+                    ${isActive ? `
+                    <button onclick="deleteChat(event, '${chat.id}')" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>` : ''}
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function showWelcome() {
+            const container = document.getElementById('messages-container');
+            container.innerHTML = `
+                <div id="welcome-screen" class="flex flex-col items-center justify-center h-full text-center opacity-80 mt-[-50px]">
+                    <div class="w-16 h-16 bg-gradient-to-tr from-blue-400 to-red-400 rounded-2xl mb-6 shadow-lg"></div>
+                    <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500 mb-2">Hi Joy</h1>
+                    <p class="text-slate-500 dark:text-slate-400 max-w-md">How can i help you Today?</p>
+                </div>
+            `;
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            
+            const isClosed = sidebar.classList.contains('-translate-x-full');
+            
+            if (isClosed) {
+                sidebar.classList.remove('-translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+                overlay.classList.add('hidden');
+            }
+        }
+
+        // --- MESSAGING & API ---
+        
+        function renderMessage(msg) { // msg: { role: 'user'|'model', text: string, image: base64 }
+            const container = document.getElementById('messages-container');
+            
+            // Remove welcome screen if it exists
+            const welcome = document.getElementById('welcome-screen');
+            if (welcome) welcome.remove();
+
+            const isUser = msg.role === 'user';
+            
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex w-full ${isUser ? 'justify-end' : 'justify-start'} animate-fade-in`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = `max-w-[85%] md:max-w-[75%] rounded-2xl p-4 shadow-sm ${
+                isUser 
+                ? 'bg-blue-600 text-white rounded-br-none' 
+                : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-bl-none'
+            }`;
+
+            let contentHtml = "";
+
+            // Render Image if exists
+            if (msg.image) {
+                contentHtml += `<img src="${msg.image}" class="max-w-full h-auto rounded-lg mb-3 border border-white/20">`;
+            }
+
+            // Render Text (Markdown for AI, Text for User)
+            if (isUser) {
+                contentHtml += `<p class="whitespace-pre-wrap font-sans">${escapeHtml(msg.text)}</p>`;
+            } else {
+                contentHtml += `<div class="prose dark:prose-invert max-w-none text-sm md:text-base leading-relaxed">${marked.parse(msg.text)}</div>`;
+            }
+
+            bubble.innerHTML = contentHtml;
+            wrapper.appendChild(bubble);
+            container.appendChild(wrapper);
+            
+            // Syntax highlight (basic)
+            if(!isUser) {
+                // Could call Prism.highlightAll() here if added
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            
+            if ((!text && !imagePayload) || !state.apiKey) {
+                if(!state.apiKey) openSettings();
+                return;
+            }
+
+            // Create chat if none
+            if (!state.currentChatId) createNewChat();
+
+            // 1. UI Updates
+            input.value = '';
+            input.style.height = 'auto';
+            document.getElementById('send-btn').disabled = true;
+            isGenerating = true;
+
+            // 2. Add User Message
+            const userMsg = { 
+                role: 'user', 
+                text: text,
+                image: imagePayload ? `data:${imagePayload.mime_type};base64,${imagePayload.data}` : null
+            };
+            
+            state.chats.find(c => c.id === state.currentChatId).messages.push(userMsg);
+            saveState();
+            renderMessage(userMsg);
+            
+            // Update Title if it's the first message
+            const currentChat = state.chats.find(c => c.id === state.currentChatId);
+            if (currentChat.messages.length === 1) {
+                currentChat.title = text.substring(0, 30) || "Image Chat";
+                renderSidebar();
+            }
+
+            // Clear Image Staging
+            const tempImagePayload = imagePayload; // Copy for API
+            clearImage();
+            scrollToBottom();
+
+            // 3. Prepare AI Placeholder
+            const container = document.getElementById('messages-container');
+            const aiWrapper = document.createElement('div');
+            aiWrapper.className = `flex w-full justify-start`;
+            aiWrapper.innerHTML = `
+                <div class="max-w-[85%] md:max-w-[75%] rounded-2xl p-4 rounded-bl-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 shadow-sm">
+                    <div class="prose dark:prose-invert max-w-none text-sm md:text-base leading-relaxed typing-cursor"></div>
+                </div>`;
+            container.appendChild(aiWrapper);
+            const aiContentDiv = aiWrapper.querySelector('.prose');
+            
+            // 4. API Call & Streaming
+            let fullResponseText = "";
+
+            try {
+                // Construct Content Parts
+                const contents = [];
+                
+                // Add System Prompt if exists (as first turn or system_instruction depending on model, simpler to prepend here for zero-build compat)
+                if(state.systemPrompt) {
+                   // Note: Pure REST API system_instruction is better, but prepend works broadly
+                }
+
+                // Add History (Simple Context Window of last 10 messages)
+                // Note: Image history handling is complex in REST without uploading files, so we usually just send text history + current image
+                const history = currentChat.messages.slice(0, -1).slice(-10); // Last 10 prev messages
+                
+                // Form History for API
+                history.forEach(m => {
+                    if (m.text) { // Skip old images to save tokens/complexity in this simple clone
+                        contents.push({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.text }] });
+                    }
+                });
+
+                // Current Message Payload
+                const currentParts = [];
+                if (text) currentParts.push({ text: text });
+                if (tempImagePayload) {
+                    currentParts.push({ inline_data: tempImagePayload });
+                }
+                contents.push({ role: 'user', parts: currentParts });
+
+                // Construct Request Body
+                const requestBody = {
+                    contents: contents,
+                    generationConfig: {
+                        temperature: 0.7,
+                        maxOutputTokens: 4096
+                    }
+                };
+                
+                // Add System Instruction correctly for Gemini 1.5
+                if(state.systemPrompt) {
+                     requestBody.system_instruction = { parts: [{ text: state.systemPrompt }] };
+                }
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${state.model}:streamGenerateContent?key=${state.apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error?.message || "API Error");
+                }
+
+                // Handle Stream
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value, { stream: true });
+                    // Gemini sends JSON objects. We need to extract candidates[0].content.parts[0].text
+                    // A simple regex approach is safer for raw streams than strict JSON parsing of fragments
+                    
+                    // The stream returns strings like: "data: { ... }\n\n" or array elements ",\n{...}"
+                    // We'll clean up and parse regex for text" : "..."
+                    
+                    // Robust extraction logic for REST stream (returns [{...}, {...}])
+                    // We iterate over the chunk looking for text fields.
+                    const lines = chunk.split('\n');
+                    for (const line of lines) {
+                        if (line.includes('"text":')) {
+                            try {
+                                // Extract content between "text": " and "
+                                // Note: This is hacky but zero-dependency compatible. 
+                                // Better: Accumulate valid JSON.
+                                // Let's try to parse the JSON objects properly.
+                                // Usually valid JSON objects come separated or in array.
+                            } catch(e) {}
+                        }
+                    }
+
+                    // BETTER APPROACH: Just append buffer and parse complete JSON objects
+                    // However, for simplicity in this specific "Zero Build" prompt:
+                    // We will parse the specific structure known to Gemini REST
+                    
+                    // Regex capture for text content inside JSON structure
+                    const regex = /"text":\s*"((?:[^"\\]|\\.)*)"/g;
+                    let match;
+                    while ((match = regex.exec(chunk)) !== null) {
+                        let content = match[1];
+                        // Unescape JSON string
+                        content = JSON.parse(`"${content}"`); 
+                        fullResponseText += content;
+                        aiContentDiv.innerHTML = marked.parse(fullResponseText);
+                        scrollToBottom();
+                    }
+                }
+
+            } catch (error) {
+                fullResponseText += `\n\n*[Error: ${error.message}]*`;
+                aiContentDiv.innerHTML = marked.parse(fullResponseText);
+            } finally {
+                // Cleanup
+                aiContentDiv.classList.remove('typing-cursor');
+                document.getElementById('send-btn').disabled = false;
+                isGenerating = false;
+                
+                // Save AI Message
+                state.chats.find(c => c.id === state.currentChatId).messages.push({
+                    role: 'model',
+                    text: fullResponseText
+                });
+                saveState();
+            }
+        }
+
+        // --- IMAGE HANDLING ---
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Raw = e.target.result; // "data:image/png;base64,....."
+                const split = base64Raw.split(',');
+                const type = split[0].match(/:(.*?);/)[1];
+                const data = split[1];
+
+                imagePayload = {
+                    mime_type: type,
+                    data: data
+                };
+
+                // Show Preview
+                const previewImg = document.getElementById('image-preview');
+                const previewCont = document.getElementById('image-preview-container');
+                previewImg.src = base64Raw;
+                previewCont.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearImage() {
+            imagePayload = null;
+            document.getElementById('image-upload').value = "";
+            document.getElementById('image-preview-container').classList.add('hidden');
+        }
+
+        // --- UTILS ---
+        function scrollToBottom() {
+            const container = document.getElementById('messages-container');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
     </script>
 </body>
